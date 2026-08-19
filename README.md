@@ -32,14 +32,13 @@ Extract and run `start.bat` - no installation required!
 - 10+ power-ups (Turbo, Shield, Blaster, Flight, Magnet, Shockwave, Slow-Mo, Score Multiplier, Double Jump)
 - Dynamic camera that adapts to lane count
 - Particle effects and post-processing bloom
-- Cyberpunk synthwave aesthetic
+- Synthwave aesthetic
 - **Fully offline** - no API keys, no internet required, no tracking
 
 ## Controls
 
 - **Arrow Keys / WASD**: Move left/right, jump
 - **Swipe** (mobile): Left/right to change lanes, up to jump
-- **Enter Shop**: Run through the Cyber Shop portal
 
 ## Distribution
 

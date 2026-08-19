@@ -7,7 +7,6 @@
 export enum GameStatus {
   MENU = 'MENU',
   PLAYING = 'PLAYING',
-  SHOP = 'SHOP',
   GAME_OVER = 'GAME_OVER',
   VICTORY = 'VICTORY'
 }
@@ -31,16 +30,15 @@ export enum ObjectType {
   MULTIPLIER = 'MULTIPLIER',
   LASER_GATE = 'LASER_GATE',
   METEOR = 'METEOR',
-  SHOP_PORTAL = 'SHOP_PORTAL',
 }
 
-export const TURBO_DURATION = 5.0; // seconds
-export const SHIELD_DURATION = 8.0; // seconds
-export const BLASTER_DURATION = 10.0; // seconds
-export const MAGNET_DURATION = 10.0; // seconds
-export const SLOW_MO_DURATION = 8.0; // seconds
-export const FLIGHT_DURATION = 6.0; // seconds
-export const MULTIPLIER_DURATION = 8.0; // seconds
+export const TURBO_DURATION = 6.0; // seconds
+export const SHIELD_DURATION = 10.0; // seconds
+export const BLASTER_DURATION = 12.0; // seconds
+export const MAGNET_DURATION = 12.0; // seconds
+export const SLOW_MO_DURATION = 10.0; // seconds
+export const FLIGHT_DURATION = 8.0; // seconds
+export const MULTIPLIER_DURATION = 10.0; // seconds
 
 export interface GameObject {
   id: string;

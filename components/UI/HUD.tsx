@@ -153,13 +153,13 @@ export const HUD: React.FC = () => {
           <div className="absolute inset-0 flex items-center justify-center z-[100] bg-black/80 backdrop-blur-sm p-4 pointer-events-auto">
               <div className="relative w-full max-w-md rounded-3xl overflow-hidden shadow-[0_0_50px_rgba(0,255,255,0.2)] border border-white/10 animate-in zoom-in-95 duration-500">
                 
-                {/* Image Container - Loaded Locally */}
+{/* Image Container - Loaded Locally */}
                 <div className="relative w-full bg-gray-900">
                      <img 
-                      src="/gemini_runner.png" 
-                      alt="Cyber Runner Cover" 
-                      className="w-full h-auto block"
-                     />
+                       src="/gemini_runner.png" 
+                       alt="Gren Dash Cover" 
+                       className="w-full h-auto block"
+                      />
                      
                      <div className="absolute inset-0 bg-gradient-to-t from-[#050011] via-black/30 to-transparent"></div>
                      

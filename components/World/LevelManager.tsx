@@ -6,7 +6,7 @@
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { Text3D, Center } from '@react-three/drei';
+import { Center } from '@react-three/drei';
 import { v4 as uuidv4 } from 'uuid';
 import { useStore } from '../../store';
 import { GameObject, ObjectType, LANE_WIDTH, SPAWN_DISTANCE, REMOVE_DISTANCE, GameStatus, FLIGHT_Y } from '../../types';
@@ -67,16 +67,8 @@ const SHADOW_ALIEN_GEO = new THREE.CircleGeometry(0.8, 32);
 const SHADOW_MISSILE_GEO = new THREE.PlaneGeometry(0.15, 3);
 const SHADOW_DEFAULT_GEO = new THREE.CircleGeometry(0.8, 6);
 
-// Shop Geometries
-const SHOP_FRAME_GEO = new THREE.BoxGeometry(1, 7, 1);
-const SHOP_BACK_GEO = new THREE.BoxGeometry(1, 5, 1.2);
-const SHOP_OUTLINE_GEO = new THREE.BoxGeometry(1, 7.2, 0.8);
-const SHOP_FLOOR_GEO = new THREE.PlaneGeometry(1, 4);
-
 const PARTICLE_COUNT = 600;
 const MISSILE_SPEED = 30;
-
-const FONT_URL = "/helvetiker_bold.typeface.json";
 
 // Magnet attraction distance
 const MAGNET_ATTRACT_RADIUS = 14;
@@ -238,7 +230,6 @@ export const LevelManager: React.FC = () => {
 
   const playerObjRef = useRef<THREE.Object3D | null>(null);
   const distanceTraveled = useRef(0);
-  const nextShopDistance = useRef(1500);
   const lastLaserFired = useRef(0);
 
   // Handle resets
@@ -250,7 +241,6 @@ export const LevelManager: React.FC = () => {
         objectsRef.current = [];
         setRenderTrigger(t => t + 1);
         distanceTraveled.current = 0;
-        nextShopDistance.current = 1500;
     }
     
     prevStatus.current = status;
@@ -323,23 +313,10 @@ export const LevelManager: React.FC = () => {
                  active: true,
                  color: '#00ffcc'
              });
-             audio.playLaserFire();
-             lastLaserFired.current = state.clock.elapsedTime;
-             hasChanges = true;
-        }
-    }
-
-    // 2. Spawn Cyber Shop Portal
-    if (distanceTraveled.current >= nextShopDistance.current) {
-         objectsRef.current = objectsRef.current.filter(obj => obj.position[2] > -80);
-         objectsRef.current.push({
-             id: uuidv4(),
-             type: ObjectType.SHOP_PORTAL,
-             position: [0, 0, -110], 
-             active: true,
-         });
-         nextShopDistance.current += 1500;
-         hasChanges = true;
+audio.playLaserFire();
+              lastLaserFired.current = state.clock.elapsedTime;
+              hasChanges = true;
+         }
     }
 
     // 3. Move & Update Entities
@@ -430,110 +407,100 @@ export const LevelManager: React.FC = () => {
             // ────────────────────────────────────────────────────────────
 
             // Collisions with Player
-            const zThreshold = 2.2;
+const zThreshold = 2.2;
             const inZZone = (prevZ < playerPos.z + zThreshold) && (obj.position[2] > playerPos.z - zThreshold);
 
             if (inZZone) {
                 const dx = Math.abs(obj.position[0] - playerPos.x);
                 if (dx < 0.9) {
-                     if (obj.type === ObjectType.SHOP_PORTAL) {
-                         const dz = Math.abs(obj.position[2] - playerPos.z);
-                         if (dz < 2.0) {
-                             setStatus(GameStatus.SHOP);
-                             obj.active = false;
-                             hasChanges = true;
-                             continue;
-                         }
-                     } else {
-                         const isDamageSource = obj.type === ObjectType.OBSTACLE || obj.type === ObjectType.ALIEN || obj.type === ObjectType.MISSILE || obj.type === ObjectType.FLOATING_MINE;
-                         
-                         if (isDamageSource) {
-                             if (isTurboActive || isShieldActive) {
-                                 obj.active = false;
-                                 hasChanges = true;
-                                 window.dispatchEvent(new CustomEvent('particle-burst', { 
-                                     detail: { position: obj.position, color: obj.color || '#ff0054' } 
-                                 }));
-                                 audio.playExplosion();
-                                 addScore(150);
-                                 continue;
-                             }
+                    const isDamageSource = obj.type === ObjectType.OBSTACLE || obj.type === ObjectType.ALIEN || obj.type === ObjectType.MISSILE || obj.type === ObjectType.FLOATING_MINE;
 
-                             const playerBottom = playerPos.y;
-                             const playerTop = playerPos.y + 1.6;
+                    if (isDamageSource) {
+                        if (isTurboActive || isShieldActive) {
+                            obj.active = false;
+                            hasChanges = true;
+                            window.dispatchEvent(new CustomEvent('particle-burst', { 
+                                detail: { position: obj.position, color: obj.color || '#ff0054' } 
+                            }));
+                            audio.playExplosion();
+                            addScore(150);
+                            continue;
+                        }
 
-                             let objBottom = obj.position[1] - 0.4;
-                             let objTop = obj.position[1] + 0.4;
+                        const playerBottom = playerPos.y;
+                        const playerTop = playerPos.y + 1.6;
 
-if (obj.type === ObjectType.OBSTACLE) {
-                                  // During flight player is at Y=3.5 — completely above ground obstacles
-                                  if (isFlightActive) {
-                                      keptObjects.push(obj);
-                                      continue;
-                                  }
-                                  objBottom = 0;
-                                  objTop = OBSTACLE_HEIGHT;
-                              } else if (obj.type === ObjectType.MISSILE) {
-                                  objBottom = 0.7;
-                                  objTop = 1.7;
-                              } else if (obj.type === ObjectType.FLOATING_MINE) {
-                                  // During flight player is at Y=3.5 — completely above floating mines
-                                  if (isFlightActive) {
-                                      keptObjects.push(obj);
-                                      continue;
-                                  }
-                                  objBottom = 1.9;
-                                  objTop = 2.5;
-                              }
+                        let objBottom = obj.position[1] - 0.4;
+                        let objTop = obj.position[1] + 0.4;
 
-                             const isHit = (playerBottom < objTop) && (playerTop > objBottom);
+                        if (obj.type === ObjectType.OBSTACLE) {
+                            // During flight player is at Y=3.5 — completely above ground obstacles
+                            if (isFlightActive) {
+                                keptObjects.push(obj);
+                                continue;
+                            }
+                            objBottom = 0;
+                            objTop = OBSTACLE_HEIGHT;
+                        } else if (obj.type === ObjectType.MISSILE) {
+                            objBottom = 0.7;
+                            objTop = 1.7;
+                        } else if (obj.type === ObjectType.FLOATING_MINE) {
+                            // During flight player is at Y=3.5 — completely above floating mines
+                            if (isFlightActive) {
+                                keptObjects.push(obj);
+                                continue;
+                            }
+                            objBottom = 1.9;
+                            objTop = 2.5;
+                        }
 
-                             if (isHit) {
-                                 window.dispatchEvent(new Event('player-hit'));
-                                 obj.active = false;
-                                 hasChanges = true;
-                                 continue;
-                             }
-                         } else {
-                             // Powerups and Gem Pickups
-                             const dy = Math.abs(obj.position[1] - playerPos.y);
-                             if (dy < 2.5) {
-                                 obj.active = false;
-                                 hasChanges = true;
+                        const isHit = (playerBottom < objTop) && (playerTop > objBottom);
 
-                                 window.dispatchEvent(new CustomEvent('particle-burst', { 
-                                     detail: { position: obj.position, color: obj.color || '#ffffff' } 
-                                 }));
-                                 audio.playPowerup();
+                        if (isHit) {
+                            window.dispatchEvent(new Event('player-hit'));
+                            obj.active = false;
+                            hasChanges = true;
+                            continue;
+                        }
+                    } else {
+                        // Powerups and Gem Pickups
+                        const dy = Math.abs(obj.position[1] - playerPos.y);
+                        if (dy < 2.5) {
+                            obj.active = false;
+                            hasChanges = true;
 
-                                 if (obj.type === ObjectType.GEM) {
-                                     collectGem(obj.points || 50);
-                                 } else if (obj.type === ObjectType.HEALTH_PACK) {
-                                     collectHealthPack();
-                                 } else if (obj.type === ObjectType.TURBO_BOOST) {
-                                     collectTurbo();
-                                     audio.playTurbo();
-                                 } else if (obj.type === ObjectType.SHIELD) {
-                                     collectShield();
-                                 } else if (obj.type === ObjectType.BLASTER_UPGRADE) {
-                                     collectBlaster();
-                                 } else if (obj.type === ObjectType.DOUBLE_JUMP_UPGRADE) {
-                                     collectDoubleJump();
-                                 } else if (obj.type === ObjectType.MAGNET_UPGRADE) {
-                                     collectMagnet();
-                                 } else if (obj.type === ObjectType.SHOCKWAVE_CHARGE) {
-                                     collectShockwave();
-                                 } else if (obj.type === ObjectType.SLOW_MO) {
-                                     collectSlowMo();
-                                 } else if (obj.type === ObjectType.FLIGHT) {
-                                     collectFlight();
-                                 } else if (obj.type === ObjectType.MULTIPLIER) {
-                                     collectMultiplier();
-                                 }
-                                 continue;
-                             }
-                         }
-                     }
+                            window.dispatchEvent(new CustomEvent('particle-burst', { 
+                                detail: { position: obj.position, color: obj.color || '#ffffff' } 
+                            }));
+                            audio.playPowerup();
+
+                            if (obj.type === ObjectType.GEM) {
+                                collectGem(obj.points || 50);
+                            } else if (obj.type === ObjectType.HEALTH_PACK) {
+                                collectHealthPack();
+                            } else if (obj.type === ObjectType.TURBO_BOOST) {
+                                collectTurbo();
+                                audio.playTurbo();
+                            } else if (obj.type === ObjectType.SHIELD) {
+                                collectShield();
+                            } else if (obj.type === ObjectType.BLASTER_UPGRADE) {
+                                collectBlaster();
+                            } else if (obj.type === ObjectType.DOUBLE_JUMP_UPGRADE) {
+                                collectDoubleJump();
+                            } else if (obj.type === ObjectType.MAGNET_UPGRADE) {
+                                collectMagnet();
+                            } else if (obj.type === ObjectType.SHOCKWAVE_CHARGE) {
+                                collectShockwave();
+                            } else if (obj.type === ObjectType.SLOW_MO) {
+                                collectSlowMo();
+                            } else if (obj.type === ObjectType.FLIGHT) {
+                                collectFlight();
+                            } else if (obj.type === ObjectType.MULTIPLIER) {
+                                collectMultiplier();
+                            }
+                            continue;
+                        }
+                    }
                 }
             }
 
@@ -607,118 +574,118 @@ if (obj.type === ObjectType.OBSTACLE) {
                      hasFired: false
                  });
              }
-         } else {
-             // SPAWN PICKUP
-             const pickupRoll = Math.random();
-             if (pickupRoll < 0.28) {
-                 // Gem
-                 keptObjects.push({
-                     id: uuidv4(),
-                     type: ObjectType.GEM,
-                     position: [lane * LANE_WIDTH, 1.1, spawnZ],
-                     active: true,
-                     color: '#00ffff',
-                     points: 50
-                 });
-             } else if (pickupRoll < 0.38) {
-                 // Health Pack
-                 keptObjects.push({
-                     id: uuidv4(),
-                     type: ObjectType.HEALTH_PACK,
-                     position: [lane * LANE_WIDTH, 1.2, spawnZ],
-                     active: true,
-                     color: '#ff3388'
-                 });
-             } else if (pickupRoll < 0.48) {
-                 // Turbo Boost
-                 keptObjects.push({
-                     id: uuidv4(),
-                     type: ObjectType.TURBO_BOOST,
-                     position: [lane * LANE_WIDTH, 1.2, spawnZ],
-                     active: true,
-                     color: '#ffea00'
-                 });
-             } else if (pickupRoll < 0.56) {
-                 // Shield
-                 keptObjects.push({
-                     id: uuidv4(),
-                     type: ObjectType.SHIELD,
-                     position: [lane * LANE_WIDTH, 1.2, spawnZ],
-                     active: true,
-                     color: '#ffd700'
-                 });
-             } else if (pickupRoll < 0.63 && !hasDoubleJump) {
-                 // Double Jump
-                 keptObjects.push({
-                     id: uuidv4(),
-                     type: ObjectType.DOUBLE_JUMP_UPGRADE,
-                     position: [lane * LANE_WIDTH, 1.2, spawnZ],
-                     active: true,
-                     color: '#2979ff'
-                 });
-             } else if (pickupRoll < 0.70) {
-                 // Blaster
-                 keptObjects.push({
-                     id: uuidv4(),
+} else {
+              // SPAWN PICKUP
+              const pickupRoll = Math.random();
+              if (pickupRoll < 0.30) {
+                  // Gem (common)
+                  keptObjects.push({
+                      id: uuidv4(),
+                      type: ObjectType.GEM,
+                      position: [lane * LANE_WIDTH, 1.1, spawnZ],
+                      active: true,
+                      color: '#00ffff',
+                      points: 50
+                  });
+              } else if (pickupRoll < 0.38) {
+                  // Health Pack
+                  keptObjects.push({
+                      id: uuidv4(),
+                      type: ObjectType.HEALTH_PACK,
+                      position: [lane * LANE_WIDTH, 1.2, spawnZ],
+                      active: true,
+                      color: '#ff3388'
+                  });
+              } else if (pickupRoll < 0.45) {
+                  // Turbo Boost
+                  keptObjects.push({
+                      id: uuidv4(),
+                      type: ObjectType.TURBO_BOOST,
+                      position: [lane * LANE_WIDTH, 1.2, spawnZ],
+                      active: true,
+                      color: '#ffea00'
+                  });
+              } else if (pickupRoll < 0.52) {
+                  // Shield
+                  keptObjects.push({
+                      id: uuidv4(),
+                      type: ObjectType.SHIELD,
+                      position: [lane * LANE_WIDTH, 1.2, spawnZ],
+                      active: true,
+                      color: '#ffd700'
+                  });
+              } else if (pickupRoll < 0.58 && !hasDoubleJump) {
+                  // Double Jump
+                  keptObjects.push({
+                      id: uuidv4(),
+                      type: ObjectType.DOUBLE_JUMP_UPGRADE,
+                      position: [lane * LANE_WIDTH, 1.2, spawnZ],
+                      active: true,
+                      color: '#2979ff'
+                  });
+              } else if (pickupRoll < 0.63) {
+                  // Blaster
+                  keptObjects.push({
+                      id: uuidv4(),
                      type: ObjectType.BLASTER_UPGRADE,
                      position: [lane * LANE_WIDTH, 1.2, spawnZ],
                      active: true,
                      color: '#00e676'
                  });
-             } else if (pickupRoll < 0.76) {
-                 // ─── GEM MAGNET ─────────────────────────────────────────
-                 keptObjects.push({
-                     id: uuidv4(),
-                     type: ObjectType.MAGNET_UPGRADE,
-                     position: [lane * LANE_WIDTH, 1.2, spawnZ],
-                     active: true,
-                     color: '#ff6ef7'  // vivid magenta
-                 });
-             } else if (pickupRoll < 0.82) {
-                 // ─── SHOCKWAVE CORE ─────────────────────────────────────
-                 keptObjects.push({
-                     id: uuidv4(),
-                     type: ObjectType.SHOCKWAVE_CHARGE,
-                     position: [lane * LANE_WIDTH, 1.2, spawnZ],
-                     active: true,
-                     color: '#ff4500'  // deep orange-red
-                 });
-             } else if (pickupRoll < 0.88) {
-                 // ─── SLOW MOTION ─────────────────────────────────────────
-                 keptObjects.push({
-                     id: uuidv4(),
-                     type: ObjectType.SLOW_MO,
-                     position: [lane * LANE_WIDTH, 1.2, spawnZ],
-                     active: true,
-                     color: '#00cfff'  // ice blue
-                 });
-             } else if (pickupRoll < 0.94) {
-                 // ─── JETPACK FLIGHT ──────────────────────────────────────
-                 keptObjects.push({
-                     id: uuidv4(),
-                     type: ObjectType.FLIGHT,
-                     position: [lane * LANE_WIDTH, 1.2, spawnZ],
-                     active: true,
-                     color: '#c0ff00'  // neon lime
-                 });
+} else if (pickupRoll < 0.68) {
+                  // ─── GEM MAGNET ─────────────────────────────────────────
+                  keptObjects.push({
+                      id: uuidv4(),
+                      type: ObjectType.MAGNET_UPGRADE,
+                      position: [lane * LANE_WIDTH, 1.2, spawnZ],
+                      active: true,
+                      color: '#ff6ef7'  // vivid magenta
+                  });
+              } else if (pickupRoll < 0.73) {
+                  // ─── SHOCKWAVE CORE ─────────────────────────────────────
+                  keptObjects.push({
+                      id: uuidv4(),
+                      type: ObjectType.SHOCKWAVE_CHARGE,
+                      position: [lane * LANE_WIDTH, 1.2, spawnZ],
+                      active: true,
+                      color: '#ff4500'  // deep orange-red
+                  });
+              } else if (pickupRoll < 0.78) {
+                  // ─── SLOW MOTION ─────────────────────────────────────────
+                  keptObjects.push({
+                      id: uuidv4(),
+                      type: ObjectType.SLOW_MO,
+                      position: [lane * LANE_WIDTH, 1.2, spawnZ],
+                      active: true,
+                      color: '#00cfff'  // ice blue
+                  });
+              } else if (pickupRoll < 0.83) {
+                  // ─── JETPACK FLIGHT ──────────────────────────────────────
+                  keptObjects.push({
+                      id: uuidv4(),
+                      type: ObjectType.FLIGHT,
+                      position: [lane * LANE_WIDTH, 1.2, spawnZ],
+                      active: true,
+                      color: '#c0ff00'  // neon lime
+                  });
 
-                 // Spawn a ring of sky gems above (collected while airborne)
-                 const ringZ = spawnZ - 8;
-                 for (let i = 0; i < 6; i++) {
-                     const angle = (i / 6) * Math.PI * 2;
-                     const rx = Math.cos(angle) * 1.5;
-                     const ry = FLIGHT_Y + Math.sin(angle) * 0.6;
-                     keptObjects.push({
-                         id: uuidv4(),
-                         type: ObjectType.GEM,
-                         position: [rx, ry, ringZ],
-                         active: true,
-                         color: '#c0ff00',
-                         points: 150  // sky gems worth more
-                     });
-                 }
-             } else {
-                 // ─── SCORE MULTIPLIER ────────────────────────────────────
+                  // Spawn a ring of sky gems above (collected while airborne)
+                  const ringZ = spawnZ - 8;
+                  for (let i = 0; i < 6; i++) {
+                      const angle = (i / 6) * Math.PI * 2;
+                      const rx = Math.cos(angle) * 1.5;
+                      const ry = FLIGHT_Y + Math.sin(angle) * 0.6;
+                      keptObjects.push({
+                          id: uuidv4(),
+                          type: ObjectType.GEM,
+                          position: [rx, ry, ringZ],
+                          active: true,
+                          color: '#c0ff00',
+                          points: 150  // sky gems worth more
+                      });
+                  }
+              } else if (pickupRoll < 0.88) {
+                  // ─── SCORE MULTIPLIER ────────────────────────────────────
                  keptObjects.push({
                      id: uuidv4(),
                      type: ObjectType.MULTIPLIER,
@@ -791,7 +758,6 @@ const GameEntity: React.FC<{ data: GameObject }> = React.memo(({ data }) => {
 
     const shadowGeo = useMemo(() => {
         if (data.type === ObjectType.GEM) return SHADOW_GEM_GEO;
-        if (data.type === ObjectType.SHOP_PORTAL) return null;
         if (data.type === ObjectType.ALIEN) return SHADOW_ALIEN_GEO;
         if (data.type === ObjectType.MISSILE) return SHADOW_MISSILE_GEO;
         if (data.type === ObjectType.LASER_PROJECTILE) return null;
@@ -800,38 +766,14 @@ const GameEntity: React.FC<{ data: GameObject }> = React.memo(({ data }) => {
 
     return (
         <group ref={groupRef} position={[data.position[0], 0, data.position[2]]}>
-            {data.type !== ObjectType.SHOP_PORTAL && data.type !== ObjectType.LASER_PROJECTILE && shadowGeo && (
+            {data.type !== ObjectType.LASER_PROJECTILE && shadowGeo && (
                 <mesh ref={shadowRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]} geometry={shadowGeo}>
                     <meshBasicMaterial color="#000000" opacity={0.3} transparent />
                 </mesh>
             )}
 
-            <group ref={visualRef} position={[0, data.position[1], 0]}>
+<group ref={visualRef} position={[0, data.position[1], 0]}>
                 
-                {/* --- SHOP PORTAL --- */}
-                {data.type === ObjectType.SHOP_PORTAL && (
-                    <group>
-                         <mesh position={[0, 3, 0]} geometry={SHOP_FRAME_GEO} scale={[laneCount * LANE_WIDTH + 2, 1, 1]}>
-                             <meshStandardMaterial color="#111111" metalness={0.8} roughness={0.2} />
-                         </mesh>
-                         <mesh position={[0, 2, 0]} geometry={SHOP_BACK_GEO} scale={[laneCount * LANE_WIDTH, 1, 1]}>
-                              <meshBasicMaterial color="#000000" />
-                         </mesh>
-                         <mesh position={[0, 3, 0]} geometry={SHOP_OUTLINE_GEO} scale={[laneCount * LANE_WIDTH + 2.2, 1, 1]}>
-                             <meshBasicMaterial color="#00ffff" wireframe transparent opacity={0.3} />
-                         </mesh>
-                         <Center position={[0, 5, 0.6]}>
-                             <Text3D font={FONT_URL} size={1.2} height={0.2}>
-                                 CYBER SHOP
-                                 <meshBasicMaterial color="#ffff00" />
-                             </Text3D>
-                         </Center>
-                         <mesh position={[0, 0.1, 0]} rotation={[-Math.PI/2, 0, 0]} geometry={SHOP_FLOOR_GEO} scale={[laneCount * LANE_WIDTH, 1, 1]}>
-                             <meshBasicMaterial color="#00ffff" transparent opacity={0.3} />
-                         </mesh>
-                    </group>
-                )}
-
                 {/* --- OBSTACLE (Spikes) --- */}
                 {data.type === ObjectType.OBSTACLE && (
                     <group>
