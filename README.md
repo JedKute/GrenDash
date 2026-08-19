@@ -6,7 +6,7 @@
 
 An endless runner game built with React Three Fiber.
 
-## Run Locally
+## Run Locally (Development)
 
 **Prerequisites:** Node.js
 
@@ -20,6 +20,31 @@ An endless runner game built with React Three Fiber.
 
 Play the game at: https://jedkute.github.io/GrenDash/
 
+## Download (Offline Version)
+
+**[Download Gren Dash v1.0.0](https://github.com/JedKute/GrenDash/releases/download/v1.0.0/GrenDash-Windows.zip)** - Standalone offline version with launcher
+
+Extract and run `start.bat` - no installation required!
+
+## Features
+
+- Endless procedural generation
+- 10+ power-ups (Turbo, Shield, Blaster, Flight, Magnet, Shockwave, Slow-Mo, Score Multiplier, Double Jump)
+- Dynamic camera that adapts to lane count
+- Particle effects and post-processing bloom
+- Cyberpunk synthwave aesthetic
+- **Fully offline** - no API keys, no internet required, no tracking
+
+## Controls
+
+- **Arrow Keys / WASD**: Move left/right, jump
+- **Swipe** (mobile): Left/right to change lanes, up to jump
+- **Enter Shop**: Run through the Cyber Shop portal
+
 ## Distribution
 
-Download the latest release from the [Releases](https://github.com/JedKute/GrenDash/releases) page for a standalone offline version.
+The offline version includes:
+- Pre-built game files (no build step needed)
+- `start.bat` - Windows launcher
+- `start.sh` - Mac/Linux launcher
+- Works with any static file server
